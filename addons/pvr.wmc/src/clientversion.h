@@ -22,9 +22,5 @@
 
 inline CStdString PVRWMC_GetClientVersion()
 {
-	#ifdef _GOTHAM_
 	return "0.2.92";	// ALSO CHANGE IN REV NUMBER in 'addon.xml.in' 
-	#else
-	return "0.1.92";	// ALSO CHANGE IN REV NUMBER in 'addon.xml.in' 
-	#endif
 }
