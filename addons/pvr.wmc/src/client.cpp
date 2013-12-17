@@ -230,12 +230,6 @@ extern "C" {
 	{
 	}
 
-#ifdef _GOTHAM_
-	void ADDON_Announce(const char *flag, const char *sender, const char *message, const void *data)
-	{
-	}
-#endif
-
 	/***********************************************************
 	* PVR Client AddOn specific public library functions
 	***********************************************************/
@@ -252,20 +246,6 @@ extern "C" {
 		return strMinApiVersion;
 	}
 	
-#ifdef _GOTHAM_
-	const char* GetGUIAPIVersion(void)
-	{
-	  static const char *strGuiApiVersion = XBMC_GUI_API_VERSION;
-	  return strGuiApiVersion;
-	}
-
-	const char* GetMininumGUIAPIVersion(void)
-	{
-	  static const char *strMinGuiApiVersion = XBMC_GUI_MIN_API_VERSION;
-	  return strMinGuiApiVersion;
-	}
-#endif
-
 	PVR_ERROR GetAddonCapabilities(PVR_ADDON_CAPABILITIES* pCapabilities)
 	{
 		pCapabilities->bSupportsEPG                = true;
@@ -595,11 +575,7 @@ extern "C" {
 	}
 
 
-#ifdef _GOTHAM_
-	PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
-#else
 	PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook)
-#endif
 	{ 
 		return PVR_ERROR_NOT_IMPLEMENTED;
 	}
@@ -623,11 +599,4 @@ extern "C" {
 	bool SeekTime(int,bool,double*) { return false; }
 	void SetSpeed(int) {};
    
-#ifdef _GOTHAM_
-	PVR_ERROR GetRecordingEdl(const PVR_RECORDING&, PVR_EDL_ENTRY[], int*) { return PVR_ERROR_NOT_IMPLEMENTED; };
-	time_t GetPlayingTime() { return 0; }
- 	time_t GetBufferTimeStart() { return 0; }
- 	time_t GetBufferTimeEnd() { return 0; }
-#endif
-
 }
