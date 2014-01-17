@@ -75,7 +75,7 @@ bool Pvr2Wmc::IsServerDown()
 
 void Pvr2Wmc::UnLoading()
 {
-	bool res = _socketClient.GetBool("ClientGoingDown");			// returns true if server is up
+	_socketClient.GetBool("ClientGoingDown");			// returns true if server is up
 }
 
 const char *Pvr2Wmc::GetBackendVersion(void)
@@ -902,7 +902,7 @@ long long Pvr2Wmc::LengthLiveStream(void)
 	if (_lastStreamSize > 0)
 		return _lastStreamSize;
 	return -1;
-} 
+}
 
 void Pvr2Wmc::PauseStream(bool bPaused)
 {
