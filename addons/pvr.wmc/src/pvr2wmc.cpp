@@ -69,13 +69,13 @@ bool Pvr2Wmc::IsServerDown()
 	CStdString request;
 	request.Format("GetServiceStatus|%s|%s", PVRWMC_GetClientVersion(), g_clientOS);
 	_socketClient.SetTimeOut(10);					// set a timout interval for checking if server is down
-	bool res = _socketClient.GetBool(request);		
+	bool res = _socketClient.GetBool(request, true);
 	return !res;
 }
 
 void Pvr2Wmc::UnLoading()
 {
-	_socketClient.GetBool("ClientGoingDown");			// returns true if server is up
+	_socketClient.GetBool("ClientGoingDown", true);			// returns true if server is up
 }
 
 const char *Pvr2Wmc::GetBackendVersion(void)
@@ -84,7 +84,7 @@ const char *Pvr2Wmc::GetBackendVersion(void)
 	{
 		CStdString request;
 		request.Format("GetServerVersion");
-		vector<CStdString> results = _socketClient.GetVector(request);		
+		vector<CStdString> results = _socketClient.GetVector(request, true);
 		if (results.size() > 1)
 		{
 			_serverBuild = atoi(results[1]);
@@ -96,7 +96,7 @@ const char *Pvr2Wmc::GetBackendVersion(void)
 
 int Pvr2Wmc::GetChannelsAmount(void)
 {
-	return _socketClient.GetInt("GetChannelCount");
+	return _socketClient.GetInt("GetChannelCount", true);
 }
 
 // test for returned error vector from server, handle accompanying messages if any
@@ -145,7 +145,7 @@ PVR_ERROR Pvr2Wmc::GetChannels(ADDON_HANDLE handle, bool bRadio)
 	if (IsServerDown())
 		return PVR_ERROR_SERVER_ERROR;
 
-	vector<CStdString> results = _socketClient.GetVector("GetChannels");
+	vector<CStdString> results = _socketClient.GetVector("GetChannels", true);
 
 	FOREACH(response, results)
 	{ 
@@ -154,6 +154,13 @@ PVR_ERROR Pvr2Wmc::GetChannels(ADDON_HANDLE handle, bool bRadio)
 		memset(&xChannel, 0, sizeof(PVR_CHANNEL));							// set all mem to zero
 		vector<CStdString> v = split(*response, "|");
 		// packing: id, bradio, c.OriginalNumber, c.CallSign, c.IsEncrypted, imageStr, c.IsBlocked
+
+		if (v.size() < 7)
+		{
+			XBMC->Log(LOG_DEBUG, "Wrong number of fields xfered for channel group data");
+			continue;
+		}
+
 		xChannel.iUniqueId = strtoul(v[0].c_str(), 0, 10);					// convert to unsigned int
 		xChannel.bIsRadio = Str2Bool(v[1]);
 		xChannel.iChannelNumber = atoi(v[2].c_str());
@@ -173,7 +180,7 @@ PVR_ERROR Pvr2Wmc::GetChannels(ADDON_HANDLE handle, bool bRadio)
 
 int Pvr2Wmc::GetChannelGroupsAmount(void)
 {
-	return _socketClient.GetInt("GetChannelGroupCount");
+	return _socketClient.GetInt("GetChannelGroupCount", true);
 }
 
 PVR_ERROR Pvr2Wmc::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
@@ -183,7 +190,7 @@ PVR_ERROR Pvr2Wmc::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
 
 	CStdString request;
 	request.Format("GetChannelGroups|%s", bRadio ? "True" : "False");
-	vector<CStdString> results = _socketClient.GetVector(request);
+	vector<CStdString> results = _socketClient.GetVector(request, true);
 
 	FOREACH(response, results)
 	{ 
@@ -191,6 +198,12 @@ PVR_ERROR Pvr2Wmc::GetChannelGroups(ADDON_HANDLE handle, bool bRadio)
 		memset(&xGroup, 0, sizeof(PVR_CHANNEL_GROUP));
 
 		vector<CStdString> v = split(*response, "|");
+
+		if (v.size() < 1)
+		{
+			XBMC->Log(LOG_DEBUG, "Wrong number of fields xfered for channel group data");
+			continue;
+		}
 
 		xGroup.bIsRadio = bRadio;
 		strncpy(xGroup.strGroupName, v[0].c_str(), sizeof(xGroup.strGroupName) - 1);
@@ -208,7 +221,7 @@ PVR_ERROR Pvr2Wmc::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL
 
 	CStdString request;
 	request.Format("GetChannelGroupMembers|%s|%s", group.bIsRadio ? "True" : "False", group.strGroupName);
-	vector<CStdString> results = _socketClient.GetVector(request);
+	vector<CStdString> results = _socketClient.GetVector(request, true);
 
 	FOREACH(response, results)
 	{ 
@@ -216,6 +229,12 @@ PVR_ERROR Pvr2Wmc::GetChannelGroupMembers(ADDON_HANDLE handle, const PVR_CHANNEL
 		memset(&xGroupMember, 0, sizeof(PVR_CHANNEL_GROUP_MEMBER));
 
 		vector<CStdString> v = split(*response, "|");
+
+		if (v.size() < 2)
+		{
+			XBMC->Log(LOG_DEBUG, "Wrong number of fields xfered for channel group member data");
+			continue;
+		}
 
 		strncpy(xGroupMember.strGroupName, group.strGroupName, sizeof(xGroupMember.strGroupName) - 1);
 		xGroupMember.iChannelUniqueId = strtoul(v[0].c_str(), 0, 10);					// convert to unsigned int
@@ -233,9 +252,9 @@ PVR_ERROR Pvr2Wmc::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL &chan
 		return PVR_ERROR_SERVER_ERROR;
 
 	CStdString request;
-	request.Format("GetEntries|%d|%d|%d", channel.iUniqueId, iStart, iEnd);		// build the request string
+	request.Format("GetEntries|%d|%d|%d", channel.iUniqueId, iStart, iEnd);			// build the request string
 
-	vector<CStdString> results = _socketClient.GetVector(request);												// get entries from server
+	vector<CStdString> results = _socketClient.GetVector(request, true);			// get entries from server
 	
 	FOREACH(response, results)
 	{ 
@@ -245,8 +264,8 @@ PVR_ERROR Pvr2Wmc::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL &chan
 
 		if (v.size() < 16)
 		{
-			XBMC->Log(LOG_DEBUG, "Wrong number of field xfered for epg data");
-			return PVR_ERROR_NO_ERROR;
+			XBMC->Log(LOG_DEBUG, "Wrong number of fields xfered for epg data");
+			continue;
 		}
 
 		//	e.Id, e.Program.Title, c.OriginalNumber, start_t, end_t,   
@@ -282,7 +301,7 @@ PVR_ERROR Pvr2Wmc::GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL &chan
 // timer functions -------------------------------------------------------------
 int Pvr2Wmc::GetTimersAmount(void)
 {
-	return _socketClient.GetInt("GetTimerCount");
+	return _socketClient.GetInt("GetTimerCount", true);
 }
 
 #ifdef TARGET_WINDOWS
@@ -343,7 +362,7 @@ PVR_ERROR Pvr2Wmc::AddTimer(const PVR_TIMER &xTmr)
 
 		command = "GetShowInfo" + timerStr;		// request data about the show that will be recorded by the timer
 		vector<CStdString> info;				// holds results from server
-		info = _socketClient.GetVector(command);				// get results from server
+		info = _socketClient.GetVector(command, true);	// get results from server
 
 		if (isServerError(info))
 		{
@@ -355,6 +374,13 @@ PVR_ERROR Pvr2Wmc::AddTimer(const PVR_TIMER &xTmr)
 			if (isSeries)							// if the show is a series, next string contains record params for series
 			{
 				vector<CStdString> v = split(info[1].c_str(), "|");		// split to unpack string containing series params
+
+				if (v.size() < 7)
+				{
+					XBMC->Log(LOG_DEBUG, "Wrong number of fields xfered for AddTimer data");
+					return PVR_ERROR_NO_ERROR;
+				}
+
 				// fill in params for dialog windows
 				recSeries = v[0] == "True";								// get reset of params for dialog windows
 				runType = atoi(v[1].c_str());							// any=0, firstRun=1, live=2
@@ -395,7 +421,7 @@ PVR_ERROR Pvr2Wmc::AddTimer(const PVR_TIMER &xTmr)
 
 	command.append(extra);								
 
-	vector<CStdString> results = _socketClient.GetVector(command);	// get results from server
+	vector<CStdString> results = _socketClient.GetVector(command, false);	// get results from server
 
 	PVR->TriggerTimerUpdate();							// update timers regardless of whether there is an error
 
@@ -486,7 +512,7 @@ PVR_ERROR Pvr2Wmc::DeleteTimer(const PVR_TIMER &xTmr, bool bForceDelete)
 	eStr.Format("|%d", deleteSeries);
 	command.append(eStr);
 
-	vector<CStdString> results = _socketClient.GetVector(command);			// get results from server
+	vector<CStdString> results = _socketClient.GetVector(command, false);	// get results from server
 
 	PVR->TriggerTimerUpdate();									// update timers regardless of whether there is an error
 
@@ -509,7 +535,7 @@ PVR_ERROR Pvr2Wmc::GetTimers(ADDON_HANDLE handle)
 	if (IsServerDown())
 		return PVR_ERROR_SERVER_ERROR;
 
-	vector<CStdString> responses = _socketClient.GetVector("GetTimers");							
+	vector<CStdString> responses = _socketClient.GetVector("GetTimers", true);							
 
 	FOREACH(response, responses)
 	{
@@ -520,6 +546,13 @@ PVR_ERROR Pvr2Wmc::GetTimers(ADDON_HANDLE handle)
 		// eId, chId, start_t, end_t, pState,
 		// rp.Program.Title, ""/*recdir*/, rp.Program.EpisodeTitle/*summary?*/, rp.Priority, rp.Request.IsRecurring,
 		// eId, preMargin, postMargin, genre, subgenre
+
+		if (v.size() < 15)
+		{
+			XBMC->Log(LOG_DEBUG, "Wrong number of fields xfered for timer data");
+			continue;
+		}
+
 		xTmr.iClientIndex = atoi(v[0].c_str());				// timer index (set to same as Entry ID)
 		xTmr.iClientChannelUid = atoi(v[1].c_str());		// channel id
 		xTmr.startTime = atoi(v[2].c_str());                // start time 
@@ -552,7 +585,7 @@ PVR_ERROR Pvr2Wmc::GetTimers(ADDON_HANDLE handle)
 // recording functions ------------------------------------------------------------------------
 int Pvr2Wmc::GetRecordingsAmount(void)
 {
-	return _socketClient.GetInt("GetRecordingsAmount");
+	return _socketClient.GetInt("GetRecordingsAmount", true);
 }
 
 // recording file  functions
@@ -561,7 +594,7 @@ PVR_ERROR Pvr2Wmc::GetRecordings(ADDON_HANDLE handle)
 	if (IsServerDown())
 		return PVR_ERROR_SERVER_ERROR;
 
-	vector<CStdString> responses = _socketClient.GetVector("GetRecordings");				
+	vector<CStdString> responses = _socketClient.GetVector("GetRecordings", true);				
 
 	FOREACH(response, responses)
 	{
@@ -573,6 +606,12 @@ PVR_ERROR Pvr2Wmc::GetRecordings(ADDON_HANDLE handle)
 		// r.Id, r.Program.Title, r.FileName, recDir, plotOutline,
 		// plot, r.Channel.CallSign, ""/*icon path*/, ""/*thumbnail path*/, ToTime_t(r.RecordingTime),
 		// duration, r.RequestedProgram.Priority, r.KeepLength.ToString(), genre, subgenre
+
+		if (v.size() < 15)
+		{
+			XBMC->Log(LOG_DEBUG, "Wrong number of fields xfered for recording data");
+			continue;
+		}
 
 		STRCPY(xRec.strRecordingId, v[0].c_str());
 		STRCPY(xRec.strTitle, v[1].c_str());
@@ -606,7 +645,7 @@ PVR_ERROR Pvr2Wmc::DeleteRecording(const PVR_RECORDING &recording)
 	CStdString command;// = format("DeleteRecording|%s|%s|%s", recording.strRecordingId, recording.strTitle, recording.strStreamURL);
 	command.Format("DeleteRecording|%s|%s|%s", recording.strRecordingId, recording.strTitle, recording.strStreamURL);
 
-	vector<CStdString> results = _socketClient.GetVector(command);					// get results from server
+	vector<CStdString> results = _socketClient.GetVector(command, false);	// get results from server
 
 
 	if (isServerError(results))							// did the server do it?
@@ -635,7 +674,7 @@ PVR_ERROR Pvr2Wmc::RenameRecording(const PVR_RECORDING &recording)
 	CStdString command;// = format("RenameRecording|%s|%s", recording.strRecordingId, recording.strTitle);
 	command.Format("RenameRecording|%s|%s", recording.strRecordingId, recording.strTitle);
 
-	vector<CStdString> results = _socketClient.GetVector(command);					// get results from server
+	vector<CStdString> results = _socketClient.GetVector(command, false);					// get results from server
 
 	if (isServerError(results))							// did the server do it?
 	{
@@ -670,7 +709,7 @@ bool Pvr2Wmc::OpenLiveStream(const PVR_CHANNEL &channel)
 	CloseLiveStream(false);							// close current stream (if any)
 
 	CStdString request = "OpenLiveStream" + Channel2String(channel);		// request a live stream using channel
-	vector<CStdString> results = _socketClient.GetVector(request);						// try to open live stream, get path to stream file
+	vector<CStdString> results = _socketClient.GetVector(request, false);						// try to open live stream, get path to stream file
 
 	if (isServerError(results))												// test if server reported an error
 	{
@@ -709,7 +748,7 @@ bool Pvr2Wmc::OpenLiveStream(const PVR_CHANNEL &channel)
 #endif
 			XBMC->Log(LOG_ERROR, lastError.c_str());						// log more info on error
 			
-			_socketClient.GetBool("StreamStartError|" + _streamFileName);	// tell server stream did not start
+			_socketClient.GetBool("StreamStartError|" + _streamFileName, true);	// tell server stream did not start
 
 			return false;
 		}
@@ -728,7 +767,7 @@ bool Pvr2Wmc::OpenLiveStream(const PVR_CHANNEL &channel)
 bool Pvr2Wmc::SwitchChannel(const PVR_CHANNEL &channel)
 {
 	CStdString request = "SwitchChannel|" + g_strClientName + Channel2String(channel);		// request a live stream using channel
-	return _socketClient.GetBool(request);				// try to open live stream, get path to stream file
+	return _socketClient.GetBool(request, false);		// try to open live stream, get path to stream file
 }
 
 // read from the live stream file opened in OpenLiveStream
@@ -839,7 +878,7 @@ bool Pvr2Wmc::CheckErrorOnServer()
 		CStdString request;
 		request.Format("CheckError");
 		//request.Format("CheckError|%d|%d|%d", checkCnt, (long)streamPos, (long)streamfileSize);
-		vector<CStdString> results = _socketClient.GetVector(request);	// see if server posted an error for active stream
+		vector<CStdString> results = _socketClient.GetVector(request, true);	// see if server posted an error for active stream
 		return isServerError(results);
 	}
 	return false;
@@ -884,7 +923,7 @@ long long Pvr2Wmc::ActualFileSize(int count)
 	{
 		CStdString request;
 		request.Format("StreamFileSize|%d", count);		// request stream size form client, passing number of consecutive queries
-		lFileSize = _socketClient.GetLL(request);
+		lFileSize = _socketClient.GetLL(request, true);
 
 		if (lFileSize < -1)								// if server returns a negative file size, it means the stream file is no longer growing (-1 => error)
 		{
@@ -923,7 +962,7 @@ bool Pvr2Wmc::CloseLiveStream(bool notifyServer /*=true*/)
 
 	if (notifyServer)
 	{	
-		return _socketClient.GetBool("CloseLiveStream");		// tell server to close down stream
+		return _socketClient.GetBool("CloseLiveStream", false);		// tell server to close down stream
 	}
 	else
 		return true;
@@ -941,7 +980,7 @@ bool Pvr2Wmc::OpenRecordedStream(const PVR_RECORDING &recording)
 	// request an active recording stream
 	CStdString request;// = format("OpenRecordingStream|%s", recording.strRecordingId);	
 	request.Format("OpenRecordingStream|%s", recording.strRecordingId);	
-	vector<CStdString> results = _socketClient.GetVector(request);	// try to open recording stream, get path to stream file
+	vector<CStdString> results = _socketClient.GetVector(request, false);	// try to open recording stream, get path to stream file
 
 	if (isServerError(results))								// test if server reported an error
 	{
@@ -972,7 +1011,7 @@ bool Pvr2Wmc::OpenRecordedStream(const PVR_RECORDING &recording)
 			lastError.Format("Error opening stream file");
 #endif
 			XBMC->Log(LOG_ERROR, lastError.c_str());						// log more info on error
-			_socketClient.GetBool("StreamStartError|" + _streamFileName);	// tell server stream did not start
+			_socketClient.GetBool("StreamStartError|" + _streamFileName, true);	// tell server stream did not start
 			return false;
 		}
 		else
