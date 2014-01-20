@@ -646,7 +646,7 @@ std::vector<CStdString> Socket::GetVector(const CStdString &request, bool allowR
 
 		cntAttempts++;
 		XBMC->Log(LOG_DEBUG, "Socket::GetVector> Retrying in %ims", sleepAttempts);
-		Sleep(sleepAttempts);
+		usleep(sleepAttempts);
 	}
 
 	close();													// close socket
