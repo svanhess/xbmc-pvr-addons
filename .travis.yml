@@ -1,6 +1,16 @@
 language: cpp
+os:
+  - osx
 compiler:
   - gcc
-  - clang
-# Change this to your needs
-script: ./bootstrap && ./configure && make zip
+before_script:
+  - "gem install travis-artifacts"
+script: "./bootstrap && ./configure && make clean && make zip"
+env:
+  global:
+  - "ARTIFACTS_AWS_REGION=us-standard"
+  - "ARTIFACTS_S3_BUCKET=xbmc-wmc-pvr"
+  - secure: JvdnvnQn0D7Pmq+rBZQXALAUaMMXRX5S8N9x0LUEMJcdOW7Fib1y5JOpFiNqqKZr+rOTfZHAvQfeA+Nk8gOr3Mc/fgPdLWpzOJCKffiLshShXtXWwCEdi3vN8GUfIKnVKJb6hDAZj+wVhISz4cNQF3ZSRASTuE1bh0Mh4xEHmCs=
+  - secure: BrY+qfUDOmBbIamv7lc9ijduEomO6EQkZFQrSfrEmrj8bGz1Gk2geJ/1fL6x0xjQkxiDVvj0IYRuEr9jQqwh7kg83Oho9cp85Qm/J1vQB3QZzdyj7k5Y5YBjD7zdY0yLDISzkZwY4B+SGCwR2kdEKC6Y32qs48lyTV31Fm++cy8=
+after_success:
+  - "travis-artifacts upload --path addons/pvr.wmc-osx64-unknown.zip"
